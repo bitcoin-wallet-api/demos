@@ -1,0 +1,19 @@
+<html>
+  <head>
+    <title></title>
+    <script src="bitcore.js"></script>
+  </head>
+  <body>
+
+  <script charset="utf-8">
+    var bitcore = require('bitcore');
+    var wallet;
+    bitcoin.getWallet(function(w) {
+      console.log("Got wallet", w);
+      wallet = w;
+      wallet.authorizeAmount(0.01, null, null, function() { console.log(arguments); }, function(e) { console.log(e) })
+    });
+
+  </script>
+  </body>
+</html>
