@@ -1,0 +1,126 @@
+<html>
+  <head>
+    <title>Bitcoin Wallet API Demo | Timestamp</title>
+    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <script src="../bitcoinjs-min.js"></script>
+    <script src="../jquery.js"></script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="../rusha.js"></script>
+
+    <style media="screen">
+      .btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 999px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+    </style>
+  </head>
+  <body style="margin: 20px">
+
+  <div class="container">
+    <div class="well" style="text-align: center">
+      <h1>Bitcoin Wallet API</h1>
+      <h2>Timestamping Demo</h2>
+    </div>
+    <div class="row">
+      <div class="col-md-4">
+          <form role="form">
+            <div class="form-group">
+              <label for="exampleInputFile">Select file</label>
+              <input type="file" id="files">
+              <p class="help-block">The file will not be uploaded, only locally processed.</p>
+            </div>
+          </form>
+      </div>
+      <div class="col-md-8">
+        <table class="table table-striped table-hover">
+          <tr>
+            <td><b>Wallet</b></td>
+            <td id="wallet-agent">Disconnected</td>
+          </tr>
+          <tr>
+            <td><b>Filename hash</b></td>
+            <td id="file-hash">None</td>
+          </tr>
+          <tr>
+            <td><b>Content hash</b></td>
+            <td id="hash">None</td>
+          </tr>
+        <tr>
+          <td><b>Transaction status</b></td>
+          <td id="tx">None</td>
+        </tr>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <script>
+    var wallet;
+    function handleFileSelect(evt) {
+      var file = evt.target.files[0]
+      var reader = new FileReader();
+      reader.onloadend = function(e) {
+        var a = new Uint8Array(e.target.result);
+        var r = new Rusha();
+        var rawFileDigest = new Uint8Array(new Int32Array(r.rawDigest(a)).buffer)
+        var rawFilenameDigest = new Uint8Array(new Int32Array(r.rawDigest(file.name)).buffer)
+        $('#hash').text(r.digest(a));
+        $('#file-hash').text(r.digest(file.name));
+          wallet.authorizeAmount(5460, null, "timestamping for " + file.name, function(auth) {
+            $('#tx').text("Preparing");
+            var tx = new Bitcoin.Transaction();
+            auth.inputs.forEach(function(i) {
+              tx.addInput(i.txid, i.vout);
+            });
+            var chunks = [Bitcoin.opcodes.OP_RETURN, Bitcoin.opcodes.OP_PUSHDATA1, 40];
+            for (i=0;i<20;i++) {
+              chunks[i+3] = rawFilenameDigest[i]
+              chunks[i+23] = rawFileDigest[i]
+            }
+            auth.outputs.forEach(function(o) {
+              tx.addOutput(Bitcoin.Script.fromHex(o.scriptPubKey), o.value);
+            });
+            tx.addOutput(Bitcoin.Script.fromChunks(chunks), 5460); // dust
+            auth.sign(tx.toHex(), function(signed) {
+              var txid = Bitcoin.Transaction.fromHex(signed).getId();
+              $('#tx').text(txid);
+              auth.broadcast(signed, function() {
+                $('#tx').html('<a target="_blank" href="http://insight.bitpay.com/tx/' + txid + '">' + txid +'</a>')
+              });
+            }, function(err) {
+              $('#tx').text("Error: " + err)
+            });
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    bitcoin.getWallet(function(w) {
+      wallet = w;
+      $('#wallet-agent').text(w.agent);
+      document.getElementById('files').addEventListener('change', handleFileSelect, false);
+    })
+  </script>
+
+  </body>
+</html>
