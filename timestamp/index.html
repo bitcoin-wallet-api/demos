@@ -81,13 +81,20 @@
             tx.addOutput(Bitcoin.Script.fromChunks(chunks), 5460); // dust
             auth.sign(tx.toHex(), function(signed) {
               var txid = Bitcoin.Transaction.fromHex(signed).getId();
-              $('#tx').text(txid);
-              auth.broadcast(signed, function() {
-                $('#tx').html('<a target="_blank" href="http://insight.bitpay.com/tx/' + txid + '">' + txid +'</a>')
+              $('#tx').html('' + txid + ' <button id="broadcast" class="btn btn-success btn-xs">Broadcast</button>');
+              $('#broadcast').click(function() {
+                auth.broadcast(signed, function() {
+                  $('#tx').html('<a target="_blank" href="http://insight.bitpay.com/tx/' + txid + '">' + txid +'</a>')
+                });
               });
             }, function(err) {
               $('#tx').text("Error: " + err)
             });
+        }, function(err) {
+          if (err == Wallet.INSUFFICIENT_FUNDS) {
+            err = "insufficient funds";
+          }
+          $('#tx').html('<span class="label label-alert">error</span>: ' + err)
         });
       };
       reader.readAsArrayBuffer(file);
