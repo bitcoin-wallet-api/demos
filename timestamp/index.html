@@ -69,7 +69,6 @@
         $('#file-hash').text(r.digest(file.name));
           wallet.authorizeAmount(5460, null, "timestamping for " + file.name, function(auth) {
             $('#tx').text("Preparing");
-            console.log(auth.token);
             var tx = new Bitcoin.Transaction();
             auth.inputs.forEach(function(i) {
               tx.addInput(i.txid, i.vout);
@@ -104,11 +103,15 @@
       reader.readAsArrayBuffer(file);
     }
 
-    bitcoin.getWallet(function(w) {
-      wallet = w;
-      $('#wallet-agent').text(w.agent);
-      document.getElementById('files').addEventListener('change', handleFileSelect, false);
-    })
+    if (window.bitcoin) {
+      bitcoin.getWallet(function(w) {
+        wallet = w;
+        $('#wallet-agent').text(w.agent);
+        document.getElementById('files').addEventListener('change', handleFileSelect, false);
+      })
+    } else {
+      $('#wallet-agent').html('<a href="https://github.com/bitcoin-wallet-api/bitcoin-core-chrome/releases">Bitcoin Wallet API extension</a> is not installed');
+    }
   </script>
 
   </body>
